@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Tạo yêu cầu rút tiền</h2>
+<p>
+    Vui lòng nhập chính xác thông tin tài khoản ngân hàng bạn muốn nhận tiền.
+</p>
+<p>Số dư hiện tại: <strong>{{ request.user.wallet.balance|floatformat:2 }}đ</strong></p>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Gửi yêu cầu rút tiền</button>
+</form>
+
+<hr>
+<h3>5 yêu cầu rút tiền gần nhất</h3>
+<ul>
+    {% for req in recent_requests %}
+    <li>
+        Ngày {{ req.created_at|date:"d/m H:i" }}
+        - Số tiền: {{ req.amount }}đ
+        - Trạng thái: <strong>{{ req.get_status_display }}</strong>
+    </li>
+    {% empty %}
+    <li>Bạn chưa có yêu cầu rút tiền nào.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

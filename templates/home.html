@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; padding: 40px;">
+    <h2>Chào mừng bạn đến với Hệ thống cược Lô và Đề miền Bắc</h2>
+    <p style="font-size: 1.2em; margin-top: 15px;">
+        Vui lòng đăng nhập để tiếp tục, hoặc đăng ký nếu bạn chưa có tài khoản.
+    </p>
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'login' %}" style="
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        ">
+            Đăng nhập
+        </a>
+
+        <a href="{% url 'register' %}" style="
+            padding: 12px 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-left: 15px;
+            font-weight: bold;
+        ">
+            Đăng ký tài khoản
+        </a>
+    </div>
+</div>
+{% endblock %}

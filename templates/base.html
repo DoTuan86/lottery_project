@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang Lô Đề</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+        .messages {
+            list-style: none;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .messages .success { background-color: #d4edda; color: #155724; }
+        .messages .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+
+<nav>
+    <a href="/">Trang chủ</a> |
+
+    {% if user.is_authenticated %}
+        <a href="{% url 'place_bet' %}">Đặt cược</a> |
+        <a href="{% url 'request_deposit' %}">Nạp tiền</a> |
+        <a href="{% url 'request_withdrawal' %}">Rút tiền</a> |
+        Chào, {{ user.username }}
+        (Số dư: {{ user.wallet.balance|floatformat:"0" }}đ) |
+        <a href="{% url 'logout' %}">Đăng xuất</a>
+    {% else %}
+        <a href="{% url 'login' %}">Đăng nhập</a> |
+        <a href="{% url 'register' %}">Đăng ký</a>
+    {% endif %}
+</nav>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Hệ thống cược Lô và Đề miền Bắc</h1>
+            <nav>
+                <a href="/">Trang chủ</a> |
+                <a href="{% url 'place_bet' %}">Đặt cược</a>
+                {% if user.is_authenticated %}
+                    | Chào, {{ user.username }}
+                    (Số dư: {{ user.wallet.balance }}đ)
+                    | <a href="{% url 'logout' %}">Đăng xuất</a>
+                {% else %}
+                    | <a href="/admin/login/">Đăng nhập</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        <hr>
+
+        <main>
+            {% block content %}
+            {% endblock %}
+        </main>
+
+        <footer>
+            <hr>
+            <p>&copy; 2025 - Chỉ vì mục đích học tập.</p>
+        </footer>
+    </div>
+</body>
+</html>

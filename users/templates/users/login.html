@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Đăng nhập</h2>
+
+{% if form.errors %}
+<p style="color: red;">
+    Tên đăng nhập hoặc mật khẩu của bạn không đúng. Vui lòng thử lại.
+</p>
+{% endif %}
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    
+    {{ form.as_p }}
+    
+    <button type="submit">Đăng nhập</button>
+</form>
+
+<p style="margin-top: 15px;">
+    Bạn chưa có tài khoản? 
+    <a href="{% url 'register' %}">Đăng ký ngay</a>
+</p>
+{% endblock %}

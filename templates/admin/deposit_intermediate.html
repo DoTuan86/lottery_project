@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div>
+    <form action="" method="post">
+        {% csrf_token %}
+        <h2>Nạp tiền cho {{ wallets|length }} ví đã chọn:</h2>
+        
+        <p>Bạn sắp nạp tiền cho các tài khoản sau:</p>
+        <ul>
+            {% for wallet in wallets %}
+            <li>
+                <strong>{{ wallet.user.username }}</strong> 
+                (Số dư hiện tại: {{ wallet.balance }}đ)
+            </li>
+            {% endfor %}
+        </ul>
+
+        <hr>
+        
+        <h3>Nhập thông tin nạp tiền:</h3>
+        {{ form.as_p }}
+        
+        <input type="hidden" name="action" value="deposit_funds">
+        
+        {% for wallet in wallets %}
+            <input type="hidden" name="_selected_action" value="{{ wallet.pk }}">
+        {% endfor %}
+
+        <br>
+        <input type="submit" name="apply" value="Xác nhận nạp tiền">
+        <a href="#" onclick="window.history.back(); return false;" style="margin-left: 10px;">Hủy bỏ</a>
+    </form>
+</div>
+{% endblock %}

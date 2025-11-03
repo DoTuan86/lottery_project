@@ -1,0 +1,35 @@
+{% extends "base.html" %} {% block content %}
+<h2>Đặt cược XSMB</h2>
+<p>Số dư của bạn: <strong>{{ request.user.wallet.balance }}đ</strong></p>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Xác nhận cược</button>
+</form>
+
+<hr>
+<h3>Các cược hôm nay ({{ "now"|date:"Y-m-d" }})</h3>
+<ul>
+    {% for bet in today_bets %}
+    <li>
+        [{{ bet.get_status_display }}] - 
+        {{ bet.get_bet_type_display }} <strong>{{ bet.number }}</strong> - 
+        Số tiền: {{ bet.amount }}đ 
+        {% if bet.status == 'WON' %}
+        (Thắng: {{ bet.winnings }}đ)
+        {% endif %}
+    </li>
+    {% empty %}
+    <li>Bạn chưa có cược nào hôm nay.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
