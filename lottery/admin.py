@@ -57,7 +57,7 @@ class LotteryResultAdmin(admin.ModelAdmin):
 @admin.register(Bet)
 class BetAdmin(admin.ModelAdmin):
     # (Giữ nguyên code của BetAdmin)
-    list_display = ('user', 'bet_type', 'number', 'amount', 'date', 'status', 'winnings')
+    list_display = ('user', 'bet_type', 'number', 'amount', 'created_at', 'status', 'winnings')
     list_filter = ('date', 'status', 'bet_type')
     search_fields = ('user__username', 'number')
     readonly_fields = ('winnings',)

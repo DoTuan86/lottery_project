@@ -56,7 +56,7 @@
                     (Số dư: {{ user.wallet.balance }}đ)
                     | <a href="{% url 'logout' %}">Đăng xuất</a>
                 {% else %}
-                    | <a href="/admin/login/">Đăng nhập</a>
+                    | <a href="{% url 'login' %}">Đăng nhập</a>
                 {% endif %}
             </nav>
         </header>
