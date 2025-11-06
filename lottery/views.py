@@ -21,123 +21,131 @@ def home_view(request):
     # Nếu chưa đăng nhập, hiển thị trang chủ
     return render(request, 'home.html')
 
+
 @login_required
 def place_bet_view(request):
-    # --- LOGIC MỚI ĐỂ XÁC ĐỊNH GIỜ ĐỊA PHƯƠNG ---
-    cutoff_hour = 12  # Giờ chốt sổ
+    # --- LOGIC MỚI (DÙNG get_current_timezone) ---
+    cutoff_hour = 18  # Giờ chốt sổ
 
-    # 1. Lấy giờ UTC hiện tại
-    utc_now = timezone.now()
-
-    # 2. Chuyển đổi sang múi giờ địa phương (GMT+7)
     try:
+        # 1. Lấy giờ UTC hiện tại
+        utc_now = timezone.now()
+        # 2. Chuyển đổi sang múi giờ địa phương (từ settings.py)
         local_now = utc_now.astimezone(timezone.get_current_timezone())
     except Exception as e:
         messages.error(request, f"LỖI MÚI GIỜ: {e}. Vui lòng kiểm tra settings.py")
-        local_now = utc_now
+        local_now = utc_now  # Trở về trạng thái cũ để tránh crash
 
-        # 3. Kiểm tra giờ địa phương
+    # 3. Kiểm tra giờ địa phương
     is_after_cutoff = local_now.hour >= cutoff_hour
 
     if is_after_cutoff:
         bet_date = local_now.date() + datetime.timedelta(days=1)
     else:
         bet_date = local_now.date()
-    # --- KẾT THÚC LOGIC MỚI ---
+    # --- (Kết thúc logic múi giờ) ---
 
     if request.method == 'POST':
         form = BetForm(request.POST)
         if form.is_valid():
+            # --- LOGIC CƯỢC NHIỀU SỐ ---
             data = form.cleaned_data
-            amount = data['amount']
+
+            # 'number' LÀ MỘT DANH SÁCH (ví dụ: ['15', '25', '35'])
+            number_list = data['number']
+
+            amount_per_bet = data['amount']
             bet_type = data['bet_type']
-            number = data['number']
             user_wallet = request.user.wallet
 
-            if user_wallet.balance < amount:
-                messages.error(request, "Số dư không đủ.")
+            # 1. Tính tổng số tiền cần
+            total_amount_needed = amount_per_bet * len(number_list)
+
+            # 2. Kiểm tra số dư TỔNG
+            if user_wallet.balance < total_amount_needed:
+                messages.error(request,
+                               f"Số dư không đủ. Bạn cần {total_amount_needed}đ để cược {len(number_list)} số.")
                 return redirect('place_bet')
 
             try:
-                # (Toàn bộ logic POST không thay đổi)
+                # Dùng transaction bao bọc TOÀN BỘ
                 with transaction.atomic():
-                    existing_bet = Bet.objects.filter(
-                        user=request.user,
-                        bet_type=bet_type,
-                        number=number,
-                        date=bet_date,
-                        status='PENDING'
-                    ).first()
 
-                    if existing_bet:
-                        # --- PATH A: CỘNG DỒN ---
-                        original_amount = existing_bet.amount
-                        existing_bet.amount += amount
-                        existing_bet.save()
-                        user_wallet.balance -= amount
-                        user_wallet.save()
+                    # 3. Trừ tổng số tiền khỏi ví MỘT LẦN
+                    user_wallet.balance -= total_amount_needed
+                    user_wallet.save()
+
+                    bets_created_count = 0
+                    bets_updated_count = 0
+
+                    # 4. LẶP qua từng số trong danh sách
+                    for number in number_list:
+
+                        # 4a. Tạo giao dịch (Transaction)
                         Transaction.objects.create(
                             wallet=user_wallet,
-                            amount=amount,
+                            amount=amount_per_bet,
                             transaction_type='BET',
-                            description=f"Ghi thêm {bet_type} {number} ngày {bet_date} (từ {original_amount}đ)"
+                            description=f"Cược (dàn) {bet_type} số {number} cho ngày {bet_date}"
                         )
-                        messages.success(request,
-                                         f"Ghi thêm thành công! Tổng cược {bet_type} {number} ngày {bet_date} là: {existing_bet.amount}đ")
 
-                    else:
-                        # --- PATH B: TẠO MỚI ---
-                        Bet.objects.create(
+                        # 4b. Kiểm tra (ghi thêm)
+                        existing_bet = Bet.objects.filter(
                             user=request.user,
                             bet_type=bet_type,
                             number=number,
-                            amount=amount,
                             date=bet_date,
                             status='PENDING'
-                        )
-                        user_wallet.balance -= amount
-                        user_wallet.save()
-                        Transaction.objects.create(
-                            wallet=user_wallet,
-                            amount=amount,
-                            transaction_type='BET',
-                            description=f"Cược {bet_type} số {number} cho ngày {bet_date}"
-                        )
-                        messages.success(request, f"Đặt cược thành công cho số {number} (Ngày cược: {bet_date})!")
+                        ).first()
 
+                        if existing_bet:
+                            # --- CỘNG DỒN ---
+                            existing_bet.amount += amount_per_bet
+                            existing_bet.save()
+                            bets_updated_count += 1
+
+                        else:
+                            # --- TẠO MỚI ---
+                            Bet.objects.create(
+                                user=request.user,
+                                bet_type=bet_type,
+                                number=number,
+                                amount=amount_per_bet,
+                                date=bet_date,
+                                status='PENDING'
+                            )
+                            bets_created_count += 1
+
+                # 5. Gửi thông báo tổng kết
+                messages.success(request,
+                                 f"Đặt cược thành công! (Cược mới: {bets_created_count} số, Cược thêm: {bets_updated_count} số). Tổng tiền: {total_amount_needed}đ.")
                 return redirect('place_bet')
 
             except IntegrityError:
                 messages.error(request,
-                               f"Lỗi: Không thể đặt cược cho số {number} (ngày {bet_date}). Có thể vé cược này đã được xử lý.")
+                               f"Lỗi: Một trong các số cược (ngày {bet_date}) đã được xử lý. Giao dịch đã bị hủy.")
             except Exception as e:
                 messages.error(request, f"Có lỗi xảy ra: {e}")
+
+            # --- KẾT THÚC LOGIC CƯỢC NHIỀU SỐ ---
 
     else:
         form = BetForm()
 
-    # --- THAY ĐỔI LOGIC TRUY VẤN Ở ĐÂY ---
-
-    # 1. Lấy ngày hôm nay và ngày mai (dựa trên giờ địa phương)
+    # --- (Logic truy vấn cược hôm nay/ngày mai) ---
     today_date = local_now.date()
     tomorrow_date = today_date + datetime.timedelta(days=1)
-
-    # 2. Lấy cược của HÔM NAY
     today_bets = Bet.objects.filter(user=request.user, date=today_date)
-
-    # 3. Lấy cược của NGÀY MAI
     tomorrow_bets = Bet.objects.filter(user=request.user, date=tomorrow_date)
-
-    # --- KẾT THÚC THAY ĐỔI ---
 
     return render(request, 'lottery/place_bet.html', {
         'form': form,
         'today_bets': today_bets,
-        'tomorrow_bets': tomorrow_bets,  # <-- GỬI QUA TEMPLATE
-        'tomorrow_date_for_display': tomorrow_date,  # <-- GỬI QUA TEMPLATE
+        'tomorrow_bets': tomorrow_bets,
+        'tomorrow_date_for_display': tomorrow_date,
+        'today_date_for_display': today_date,
         'is_after_cutoff': is_after_cutoff,
         'bet_date_for_display': bet_date,
-        'today_date_for_display': today_date,
     })
 
 
