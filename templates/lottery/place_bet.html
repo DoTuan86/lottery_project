@@ -3,8 +3,6 @@
 {% block content %}
 <h2>Đặt cược XS</h2>
 
-<p>Số dư của bạn: <strong>{{ request.user.wallet.balance|floatformat:2 }}đ</strong></p>
-
 {% if messages %}
   <ul class="messages">
     {% for message in messages %}
@@ -13,35 +11,26 @@
   </ul>
 {% endif %}
 
-<form method="post">
+<p>Số dư của bạn: <strong>{{ request.user.wallet.balance|floatformat:2 }}đ</strong></p>
+
+<form method="post" class="form-layout">
     {% csrf_token %}
 
-    <p>
-        <label for="{{ form.station.id_for_label }}">{{ form.station.label }}:</label>
-        <select name="{{ form.station.name }}" id="{{ form.station.id_for_label }}">
-            {% for group_name, group_choices in form.station.field.choices %}
-                <optgroup label="{{ group_name }}">
-                    {% for value, label in group_choices %}
-                        <option value="{{ value }}" {% if form.station.value == value|stringformat:"s" %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </optgroup>
-            {% empty %}
-                <option value="" disabled>Không có đài nào mở cược</option>
-            {% endfor %}
-        </select>
-        {% if form.station.errors %}
-            <ul class="errorlist">
-                {% for error in form.station.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-    </p>
-    {{ form.bet_type.label_tag }} {{ form.bet_type }}
-    {{ form.number.label_tag }} {{ form.number }}
-    {{ form.amount.label_tag }} {{ form.amount }}
+    <label for="{{ form.station.id_for_label }}">{{ form.station.label }}:</label>
+    {{ form.station }}
 
-    <button type="submit">Xác nhận cược</button>
+    <label for="{{ form.bet_type.id_for_label }}">{{ form.bet_type.label }}:</label>
+    {{ form.bet_type }}
+
+    <label for="{{ form.number.id_for_label }}">{{ form.number.label }}:</label>
+    {{ form.number }}
+
+    <label for="{{ form.amount.id_for_label }}">{{ form.amount.label }}:</label>
+    {{ form.amount }}
+
+    <div class="form-full-width">
+        <button type="submit" class="form-button">Xác nhận cược</button>
+    </div>
 </form>
 
 <hr>
