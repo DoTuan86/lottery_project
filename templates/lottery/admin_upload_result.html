@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Admin: Upload Kết Quả Xổ Số Bằng Ảnh</h2>
+<p>
+    Chụp ảnh màn hình kết quả, chọn ngày và upload ảnh. 
+    Hệ thống sẽ tự động nhập liệu và tính toán thắng/thua.
+</p>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" style="background-color: #007bff; color: white; padding: 10px 15px;">
+        Upload và Chạy Tính Toán
+    </button>
+</form>
+
+<hr>
+<p>
+    <a href="/admin/">Quay lại trang Admin chính</a>
+</p>
+{% endblock %}
