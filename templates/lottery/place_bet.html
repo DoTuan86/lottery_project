@@ -1,13 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Đặt cược XSMB</h2>
-
-{% if is_after_cutoff %}
-    <p style="color: red; font-weight: bold; background: #fff3f3; padding: 10px; border-radius: 5px;">
-        Đã qua 18h00. Mọi cược đặt bây giờ sẽ được tính cho ngày mai ({{ bet_date_for_display|date:"d/m/Y" }}).
-    </p>
-{% endif %}
+<h2>Đặt cược XS</h2>
 
 <p>Số dư của bạn: <strong>{{ request.user.wallet.balance|floatformat:2 }}đ</strong></p>
 
@@ -18,10 +12,36 @@
     {% endfor %}
   </ul>
 {% endif %}
+
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" style="background-color: cyan; color: black; font-weight: bold; padding: 5px 10px; font-size: 1.4em;">Xác nhận cược</button>
+
+    <p>
+        <label for="{{ form.station.id_for_label }}">{{ form.station.label }}:</label>
+        <select name="{{ form.station.name }}" id="{{ form.station.id_for_label }}">
+            {% for group_name, group_choices in form.station.field.choices %}
+                <optgroup label="{{ group_name }}">
+                    {% for value, label in group_choices %}
+                        <option value="{{ value }}" {% if form.station.value == value|stringformat:"s" %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </optgroup>
+            {% empty %}
+                <option value="" disabled>Không có đài nào mở cược</option>
+            {% endfor %}
+        </select>
+        {% if form.station.errors %}
+            <ul class="errorlist">
+                {% for error in form.station.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </p>
+    {{ form.bet_type.label_tag }} {{ form.bet_type }}
+    {{ form.number.label_tag }} {{ form.number }}
+    {{ form.amount.label_tag }} {{ form.amount }}
+
+    <button type="submit">Xác nhận cược</button>
 </form>
 
 <hr>
@@ -30,22 +50,16 @@
 <ul>
     {% for bet in today_bets %}
     <li>
+        <strong>Đài: {{ bet.station.name }}</strong>
+        (Lúc: {{ bet.created_at|time:"H:i" }}) -
         [{{ bet.get_status_display }}] -
-        Lúc: <strong>{{ bet.created_at|time:"H:i" }}</strong> -
         {{ bet.get_bet_type_display }} <strong>{{ bet.number }}</strong> -
         Số tiền: {{ bet.amount }}đ
-        {% if bet.status == 'WON' %}
-            (Thắng: {{ bet.winnings }}đ)
-        {% endif %}
-
+        {% if bet.status == 'WON' %} (Thắng: {{ bet.winnings }}đ) {% endif %}
         {% if bet.status == 'PENDING' %}
-            {% if not is_after_cutoff %}
-                <a href="{% url 'delete_bet' bet.id %}"
-                   onclick="return confirm('Bạn chắc chắn muốn xóa cược này và nhận lại tiền?');"
-                   style="color: red; margin-left: 10px;">
-                   [Xóa]
-                </a>
-            {% endif %}
+            <a href="{% url 'delete_bet' bet.id %}"
+               onclick="return confirm('Bạn chắc chắn muốn xóa cược này?');"
+               style="color: red; margin-left: 10px;">[Xóa]</a>
         {% endif %}
     </li>
     {% empty %}
@@ -58,19 +72,17 @@
 <ul>
     {% for bet in tomorrow_bets %}
     <li>
+        <strong>Đài: {{ bet.station.name }}</strong>
+        (Lúc: {{ bet.created_at|time:"H:i" }}) -
         [Chờ xử lý] -
-        Lúc: <strong>{{ bet.created_at|time:"H:i" }}</strong> -
         {{ bet.get_bet_type_display }} <strong>{{ bet.number }}</strong> -
         Số tiền: {{ bet.amount }}đ
-
         <a href="{% url 'delete_bet' bet.id %}"
-           onclick="return confirm('Bạn chắc chắn muốn xóa cược này và nhận lại tiền?');"
-           style="color: red; margin-left: 10px;">
-           [Xóa]
-        </a>
+           onclick="return confirm('Bạn chắc chắn muốn xóa cược này?');"
+           style="color: red; margin-left: 10px;">[Xóa]</a>
     </li>
     {% empty %}
-    <li style="color: darkorange;">Chúc bạn may mắn!</li>
+    <li>Bạn chưa có cược nào cho ngày mai.</li>
     {% endfor %}
 </ul>
 {% endblock %}

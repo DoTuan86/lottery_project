@@ -1,50 +1,52 @@
 from django.contrib import admin, messages
-from .models import LotteryResult, Bet
-# Import hàm logic mới của chúng ta
+from .models import LotteryResult, Bet, LotteryStation  # Thêm LotteryStation
 from .logic import process_lottery_results
 
 
+# Đăng ký model mới
+@admin.register(LotteryStation)
+class LotteryStationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'identifier', 'region', 'prize_count', 'cutoff_hour', 'schedule_days')
+    list_filter = ('region',)
+    search_fields = ('name', 'identifier')
+
+
+# Nâng cấp model cũ
 @admin.register(LotteryResult)
 class LotteryResultAdmin(admin.ModelAdmin):
-    list_display = ('date', 'de_number', 'prizes_count')
+    list_display = ('date', 'station', 'de_number', 'prizes_count')
+    list_filter = ('date', 'station')
     readonly_fields = ('de_number', 'lo_numbers')
     search_fields = ['date']
-
-    # === THÊM PHẦN NÀY ===
-
-    # 1. Thêm 'run_calculation' vào danh sách actions
     actions = ['run_calculation']
 
-    # 2. Định nghĩa action
-    @admin.action(description="Tính toán thắng/thua cho các ngày đã chọn")
+    @admin.action(description="Tính toán thắng/thua cho các kết quả đã chọn")
     def run_calculation(self, request, queryset):
-        """
-        Admin Action để chạy tính toán thắng/thua.
-        'queryset' là danh sách các đối tượng LotteryResult mà admin đã tick chọn.
-        """
-
         success_count = 0
         error_count = 0
 
-        # Lặp qua từng 'Kết quả' mà admin đã chọn
         for result_obj in queryset:
-            # Gọi hàm logic
-            success_msg, error_msg = process_lottery_results(result_obj.date)
+            if result_obj.station:
+                success_msg, error_msg = process_lottery_results(
+                    result_obj.date,
+                    result_obj.station.id
+                )
 
-            # Hiển thị thông báo cho admin
-            if error_msg:
-                # self.message_user là cách hiển thị thông báo trong admin
-                self.message_user(request, f"Lỗi ngày {result_obj.date}: {error_msg}", messages.ERROR)
+                if error_msg:
+                    self.message_user(request, f"Lỗi ngày {result_obj.date} ({result_obj.station.name}): {error_msg}",
+                                      messages.ERROR)
+                    error_count += 1
+                if success_msg:
+                    self.message_user(request,
+                                      f"Kết quả ngày {result_obj.date} ({result_obj.station.name}): {success_msg}",
+                                      messages.INFO)
+                    success_count += 1
+            else:
+                self.message_user(request, f"Lỗi: Kết quả ngày {result_obj.date} thiếu đài.", messages.ERROR)
                 error_count += 1
-            if success_msg:
-                self.message_user(request, f"Kết quả ngày {result_obj.date}: {success_msg}", messages.INFO)
-                success_count += 1
 
-        # Báo cáo tổng kết
-        self.message_user(request, f"Hoàn tất xử lý. Thành công: {success_count} ngày, Lỗi: {error_count} ngày.",
+        self.message_user(request, f"Hoàn tất xử lý. Thành công: {success_count}, Lỗi: {error_count}.",
                           messages.SUCCESS)
-
-    # === KẾT THÚC PHẦN THÊM ===
 
     def prizes_count(self, obj):
         if obj.prizes:
@@ -56,8 +58,7 @@ class LotteryResultAdmin(admin.ModelAdmin):
 
 @admin.register(Bet)
 class BetAdmin(admin.ModelAdmin):
-    # (Giữ nguyên code của BetAdmin)
-    list_display = ('user', 'bet_type', 'number', 'amount', 'created_at', 'status', 'winnings')
-    list_filter = ('date', 'status', 'bet_type')
-    search_fields = ('user__username', 'number')
-    readonly_fields = ('winnings',)
+    list_display = ('user', 'station', 'bet_type', 'number', 'amount', 'date', 'status', 'winnings', 'created_at')
+    list_filter = ('date', 'status', 'bet_type', 'station')
+    search_fields = ('user__username', 'number', 'station__name')
+    readonly_fields = ('winnings', 'created_at')
